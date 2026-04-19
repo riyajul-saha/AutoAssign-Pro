@@ -128,15 +128,55 @@ class AutoAssignProApp(ctk.CTk):
         # Topic Entry
         topic_label = ctk.CTkLabel(
             input_frame,
-            text="Topic",
+            text="Language / Topic",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=COLORS["text"],
         )
         topic_label.pack(anchor="w", pady=(0, 5))
 
-        self.topic_entry = ctk.CTkEntry(
+        CODING_LANGUAGES = [
+            "C", "C++", "C#", "Dart", "Go", "HTML/CSS",
+            "Java", "JavaScript", "Kotlin", "PHP",
+            "Python", "R", "Ruby", "Rust", "SQL",
+            "Swift", "TypeScript",
+        ]
+
+        self.topic_entry = ctk.CTkOptionMenu(
             input_frame,
-            placeholder_text="Enter assignment topic (optional)",
+            values=CODING_LANGUAGES,
+            height=40,
+            font=ctk.CTkFont(size=13),
+            fg_color=COLORS["card"],
+            text_color=COLORS["text"],
+            button_color="#1F2937",
+            button_hover_color=COLORS["accent"],
+            dropdown_fg_color=COLORS["card"],
+            dropdown_text_color=COLORS["text"],
+            dropdown_hover_color=COLORS["accent"],
+            corner_radius=8,
+        )
+        self.topic_entry.set("Select Language")
+        self.topic_entry.pack(fill="x", pady=(0, 15))
+
+        # Row frame for Description & Number
+        row_frame = ctk.CTkFrame(input_frame, fg_color="transparent")
+        row_frame.pack(fill="x", pady=(0, 15))
+
+        # Description / Specific Field Entry
+        desc_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
+        desc_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        desc_label = ctk.CTkLabel(
+            desc_frame,
+            text="Description / Specific Field",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=COLORS["text"],
+        )
+        desc_label.pack(anchor="w", pady=(0, 5))
+
+        self.desc_entry = ctk.CTkEntry(
+            desc_frame,
+            placeholder_text="OS, ML, Basic, etc.",
             height=40,
             font=ctk.CTkFont(size=13),
             fg_color=COLORS["card"],
@@ -144,8 +184,36 @@ class AutoAssignProApp(ctk.CTk):
             border_width=0,
             corner_radius=8,
         )
-        self.topic_entry.pack(fill="x", pady=(0, 30))
-        self._add_focus_glow(self.topic_entry)
+        self.desc_entry.insert(0, "Basic")
+        self.desc_entry.pack(fill="x")
+        self._add_focus_glow(self.desc_entry)
+
+        # Assignment Number Entry
+        num_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
+        num_frame.pack(side="right", fill="both", expand=False)
+        
+        num_label = ctk.CTkLabel(
+            num_frame,
+            text="No. Questions",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=COLORS["text"],
+        )
+        num_label.pack(anchor="w", pady=(0, 5))
+
+        self.num_entry = ctk.CTkEntry(
+            num_frame,
+            width=120,
+            placeholder_text="5",
+            height=40,
+            font=ctk.CTkFont(size=13),
+            fg_color=COLORS["card"],
+            border_color=COLORS["accent"],
+            border_width=0,
+            corner_radius=8,
+        )
+        self.num_entry.insert(0, "5")
+        self.num_entry.pack(fill="x")
+        self._add_focus_glow(self.num_entry)
 
         # Questions Textbox
         questions_label = ctk.CTkLabel(
@@ -180,7 +248,7 @@ class AutoAssignProApp(ctk.CTk):
         # Smart Hint
         hint_label = ctk.CTkLabel(
             input_frame,
-            text="💡 Tip: Fill either Topic OR Questions. No need to fill both.",
+            text="💡 Tip: Language / Topic is mandatory. You can also paste existing questions below.",
             font=ctk.CTkFont(size=12),
             text_color=COLORS["text_secondary"],
         )
@@ -432,6 +500,68 @@ class AutoAssignProApp(ctk.CTk):
         btn.pack(pady=(0, 20))
 
     # ------------------------------------------------------------------
+    # Invalid Input Popup — Shown when AI rejects the input
+    # ------------------------------------------------------------------
+    def _show_invalid_input_popup(self):
+        """Display a premium-styled modal popup when the AI detects
+        the user's input is not a valid topic or question."""
+        popup = ctk.CTkToplevel(self)
+        popup.title("Invalid Input")
+        popup.geometry("420x260")
+        popup.resizable(False, False)
+        popup.configure(fg_color=COLORS["bg"])
+        popup.transient(self)
+        popup.grab_set()
+
+        # Center the popup relative to the main window
+        popup.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - popup.winfo_width()) // 2
+        y = self.winfo_y() + (self.winfo_height() - popup.winfo_height()) // 2
+        popup.geometry(f"+{x}+{y}")
+
+        # Styled card container
+        card = ctk.CTkFrame(
+            popup, fg_color=COLORS["card"], corner_radius=16,
+            border_color="#F85149", border_width=2,
+        )
+        card.pack(fill="both", expand=True, padx=12, pady=12)
+
+        # Icon
+        ctk.CTkLabel(
+            card, text="🚫", font=ctk.CTkFont(size=42),
+        ).pack(pady=(18, 4))
+
+        # Title
+        ctk.CTkLabel(
+            card, text="Not a Valid Topic or Question",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=COLORS["error"],
+        ).pack(pady=(0, 6))
+
+        # Description
+        ctk.CTkLabel(
+            card,
+            text="The AI could not recognize your input as a legitimate\n"
+                 "topic or assignment question. Please enter a real\n"
+                 "academic topic or valid questions and try again.",
+            font=ctk.CTkFont(size=13),
+            text_color=COLORS["text_secondary"],
+            justify="center",
+            wraplength=360,
+        ).pack(pady=(0, 14))
+
+        # Dismiss button
+        btn = ctk.CTkButton(
+            card, text="Try Again",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=COLORS["accent"], hover_color="#33D6FF",
+            text_color="#000000", corner_radius=10,
+            width=140, height=36,
+            command=popup.destroy,
+        )
+        btn.pack(pady=(0, 16))
+
+    # ------------------------------------------------------------------
     # Start Generation — Input validation + thread launch
     # ------------------------------------------------------------------
     def start_generation(self):
@@ -442,16 +572,28 @@ class AutoAssignProApp(ctk.CTk):
         # Read and sanitize inputs
         topic = self.topic_entry.get().strip()
         questions = self.questions_textbox.get("1.0", "end-1c").strip()
+        
+        description = self.desc_entry.get().strip()
+        if not description:
+            description = "Basic"
+            
+        num_questions_str = self.num_entry.get().strip()
+        try:
+            num_questions = int(num_questions_str) if num_questions_str else 5
+            if num_questions <= 0:
+                num_questions = 5
+        except ValueError:
+            num_questions = 5
 
         # Ignore the placeholder text as valid input
         if questions == self.questions_placeholder:
             questions = ""
 
-        # Both fields empty → show error popup and abort
-        if not topic and not questions:
+        # Topic is now compulsory
+        if not topic:
             self._show_error_popup(
                 "Input Required",
-                "Please provide either a Topic or Questions to begin generation.",
+                "Please select or enter a Language/Topic. It is mandatory.",
             )
             return
 
@@ -459,6 +601,8 @@ class AutoAssignProApp(ctk.CTk):
         self.is_processing = True
         self.start_button.configure(text="⏳ Processing...", state="disabled")
         self.topic_entry.configure(state="disabled")
+        self.desc_entry.configure(state="disabled")
+        self.num_entry.configure(state="disabled")
         self.questions_textbox.configure(state="disabled")
         self._set_status("processing", COLORS["accent"])
         self.progress_bar.start()
@@ -470,7 +614,7 @@ class AutoAssignProApp(ctk.CTk):
 
         # Launch the backend on a daemon thread (keeps UI responsive)
         thread = threading.Thread(
-            target=self._run_generation, args=(topic, questions),
+            target=self._run_generation, args=(topic, questions, description, num_questions),
         )
         thread.daemon = True
         thread.start()
@@ -478,7 +622,7 @@ class AutoAssignProApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Worker Thread — Delegates to backend.generate_assignment()
     # ------------------------------------------------------------------
-    def _run_generation(self, topic, questions):
+    def _run_generation(self, topic, questions, description, num_questions):
         """
         Runs on a background thread.
         Calls the backend orchestrator and routes its log messages
@@ -492,31 +636,46 @@ class AutoAssignProApp(ctk.CTk):
         result = generate_assignment(
             topic=topic,
             questions=questions,
+            description=description,
+            num_questions=num_questions,
             log_callback=log_to_ui,
         )
 
         # Schedule UI completion on the main thread
-        self.after(0, self._generation_complete, result["success"])
+        self.after(0, self._generation_complete, result)
 
     # ------------------------------------------------------------------
     # Generation Complete — Re-enable the UI
     # ------------------------------------------------------------------
-    def _generation_complete(self, success=True):
+    def _generation_complete(self, result):
         """Restore all UI controls after generation finishes."""
+        success = result["success"]
+        message = result.get("message", "")
+
         self.is_processing = False
         self.start_button.configure(text="🚀 Start Generation", state="normal")
         self.topic_entry.configure(state="normal")
+        self.desc_entry.configure(state="normal")
+        self.num_entry.configure(state="normal")
         self.questions_textbox.configure(state="normal")
+
+        # Stop the progress bar animation
+        self.progress_bar.stop()
+        self.progress_bar.set(0)
+
+        # Handle invalid input specifically
+        if message == "INVALID_INPUT":
+            self._set_status("error", COLORS["error"])
+            self._log("─" * 40)
+            self._log("🚫 Input rejected — not a valid topic or question.")
+            self._show_invalid_input_popup()
+            return
 
         # Update status indicator based on result
         if success:
             self._set_status("idle", COLORS["success"])
         else:
             self._set_status("error", COLORS["error"])
-
-        # Stop the progress bar animation
-        self.progress_bar.stop()
-        self.progress_bar.set(0)
 
         # Final log messages
         self._log("─" * 40)

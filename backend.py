@@ -64,46 +64,61 @@ def load_api_key() -> str | None:
 #  Prompt Builders
 # ──────────────────────────────────────────────────────────
 
-def build_prompt_from_questions(user_questions: str) -> str:
+def build_prompt_from_questions(user_questions: str, num_questions: int) -> str:
     """
     Case 1 — User provided raw questions.
     Build a prompt asking the AI to structure them into JSON.
 
     Args:
         user_questions: Raw question text entered by the user.
+        num_questions: Target number of questions to format.
 
     Returns:
         The formatted prompt string.
     """
     return (
         f'Here is a raw list of assignment questions: "{user_questions}". \n'
-        f'Format them into a valid JSON object. Return ONLY the raw JSON '
+        f'First, verify that the text above actually contains valid assignment '
+        f'questions or academic tasks. If the text is random gibberish, '
+        f'greetings, unrelated sentences, code snippets that are not questions, '
+        f'or anything that is NOT a legitimate question or set of questions, '
+        f'respond with EXACTLY the single word: INVALID_INPUT\n'
+        f'Otherwise, format them into a valid JSON object of (if possible) {num_questions} questions. Return ONLY the raw JSON '
         f'without any markdown or extra text. Use this exact structure:\n'
         f'{{"assignment_title": "Custom Assignment", "questions": '
         f'[{{"id": 1, "task": "..."}}]}}'
     )
 
 
-def build_prompt_from_topic(topic_name: str) -> str:
+def build_prompt_from_topic(topic_name: str, description: str, num_questions: int) -> str:
     """
     Case 2 — User provided only a topic (no questions).
     Build a prompt asking the AI to generate assignment questions.
 
     Args:
         topic_name: The assignment topic entered by the user.
+        description: Specific field or details for the topic.
+        num_questions: Number of questions to generate.
 
     Returns:
         The formatted prompt string.
     """
-    return (
-        f'Act as a computer science professor. Generate 5 practical and '
-        f'most valuable programming assignment questions on the topic: '
-        f'"{topic_name}". \n'
-        f'Return ONLY a raw, valid JSON object without any markdown '
+    prompt = f'Act as a computer science professor. Generate {num_questions} practical and most valuable programming assignment questions on the topic: "{topic_name}". '
+    
+    if description and description.strip().lower() != "basic":
+        prompt += f'Specifically, focus these questions on the specific field or concept of: "{description}". '
+
+    prompt += (
+        f'\nFirst, verify that "{topic_name}" is a legitimate academic topic, '
+        f'subject, or field of study. If it is random gibberish, greetings, '
+        f'unrelated nonsense, emoji-only text, or anything that is NOT a '
+        f'valid topic, respond with EXACTLY the single word: INVALID_INPUT\n'
+        f'Otherwise, return ONLY a raw, valid JSON object without any markdown '
         f'formatting or extra text. Use this exact structure:\n'
         f'{{"assignment_title": "{topic_name}", "questions": '
         f'[{{"id": 1, "task": "..."}}]}}'
     )
+    return prompt
 
 
 # ──────────────────────────────────────────────────────────
@@ -220,7 +235,7 @@ def parse_and_save(raw_text: str) -> dict:
 #  High-Level Orchestrator  (called by the UI thread)
 # ──────────────────────────────────────────────────────────
 
-def generate_assignment(topic: str, questions: str, log_callback=None):
+def generate_assignment(topic: str, questions: str, description: str = "Basic", num_questions: int = 5, log_callback=None):
     """
     Main entry point for the backend pipeline.
 
@@ -230,6 +245,8 @@ def generate_assignment(topic: str, questions: str, log_callback=None):
     Args:
         topic:         The topic string (may be empty).
         questions:     The raw questions string (may be empty).
+        description:   Specific field to narrow down the topic.
+        num_questions: Target number of questions to generate.
         log_callback:  Optional callable(str) for real-time log messages.
 
     Returns:
@@ -256,12 +273,13 @@ def generate_assignment(topic: str, questions: str, log_callback=None):
 
     if questions:
         # Case 1 — User gave raw questions → ask AI to structure them
-        log("Mode: Structuring raw questions (Case 1)")
-        prompt = build_prompt_from_questions(questions)
+        log(f"Mode: Structuring {num_questions} raw questions (Case 1)")
+        prompt = build_prompt_from_questions(questions, num_questions)
     else:
         # Case 2 — User gave only a topic → ask AI to generate questions
-        log(f"Mode: Generating questions for topic '{topic}' (Case 2)")
-        prompt = build_prompt_from_topic(topic)
+        desc_log = f" with focus on '{description}'" if description.lower() != "basic" else ""
+        log(f"Mode: Generating {num_questions} questions for topic '{topic}'{desc_log} (Case 2)")
+        prompt = build_prompt_from_topic(topic, description, num_questions)
 
     # ── Step 3: Call the OpenRouter API ──────────────────
     log(f"Connecting to OpenRouter ({MODEL_NAME})...")
@@ -277,7 +295,17 @@ def generate_assignment(topic: str, questions: str, log_callback=None):
         log(f"❌ {error_msg}")
         return {"success": False, "message": error_msg, "data": None}
 
-    # ── Step 4: Parse response & save JSON ───────────────
+    # ── Step 4: Check for invalid input sentinel ────────
+    cleaned_response = clean_ai_response(raw_text).strip()
+    if cleaned_response.upper() == "INVALID_INPUT" or "INVALID_INPUT" in cleaned_response.upper().split():
+        log("⚠️ AI detected the input is not a valid topic or question.")
+        return {
+            "success": False,
+            "message": "INVALID_INPUT",
+            "data": None,
+        }
+
+    # ── Step 5: Parse response & save JSON ───────────────
     log("Parsing AI response...")
 
     try:
@@ -286,7 +314,7 @@ def generate_assignment(topic: str, questions: str, log_callback=None):
         log("❌ AI returned invalid JSON. Could not parse.")
         return {"success": False, "message": "AI returned invalid JSON.", "data": None}
 
-    # ── Step 5: Done! ────────────────────────────────────
+    # ── Step 6: Done! ────────────────────────────────────
     log(f"Saving to {OUTPUT_FILE}...")
     log("✅ Assignment saved successfully!")
 
