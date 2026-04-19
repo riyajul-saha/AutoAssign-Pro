@@ -134,28 +134,25 @@ class AutoAssignProApp(ctk.CTk):
         )
         topic_label.pack(anchor="w", pady=(0, 5))
 
-        CODING_LANGUAGES = [
-            "C", "C++", "C#", "Dart", "Go", "HTML/CSS",
-            "Java", "JavaScript", "Kotlin", "PHP",
-            "Python", "R", "Ruby", "Rust", "SQL",
-            "Swift", "TypeScript",
-        ]
+        CODING_LANGUAGES = ["Choose A Topic", "C", "C++", "C#", "Dart", "Go", "HTML/CSS", "Java", "JavaScript", "Kotlin", "PHP", "Python", "R", "Ruby", "Rust", "SQL", "Swift", "TypeScript"]
 
-        self.topic_entry = ctk.CTkOptionMenu(
+        self.topic_entry = ctk.CTkComboBox(
             input_frame,
             values=CODING_LANGUAGES,
+            state="readonly",
             height=40,
             font=ctk.CTkFont(size=13),
             fg_color=COLORS["card"],
-            text_color=COLORS["text"],
-            button_color="#1F2937",
-            button_hover_color=COLORS["accent"],
+            border_color=COLORS["accent"],
+            border_width=0,
+            corner_radius=8,
             dropdown_fg_color=COLORS["card"],
             dropdown_text_color=COLORS["text"],
             dropdown_hover_color=COLORS["accent"],
-            corner_radius=8,
+            button_color=COLORS["accent"],
+            button_hover_color="#33D6FF",
         )
-        self.topic_entry.set("Select Language")
+        self.topic_entry.set("Choose A Topic")
         self.topic_entry.pack(fill="x", pady=(0, 15))
 
         # Row frame for Description & Number
@@ -590,10 +587,10 @@ class AutoAssignProApp(ctk.CTk):
             questions = ""
 
         # Topic is now compulsory
-        if not topic:
+        if not topic or topic == "Choose A Topic":
             self._show_error_popup(
                 "Input Required",
-                "Please select or enter a Language/Topic. It is mandatory.",
+                "Please select a Language/Topic from the list. It is mandatory.",
             )
             return
 
