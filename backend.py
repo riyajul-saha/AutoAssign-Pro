@@ -103,7 +103,7 @@ def build_prompt_from_topic(topic_name: str, description: str, num_questions: in
     Returns:
         The formatted prompt string.
     """
-    prompt = f'Act as a computer science professor. Generate {num_questions} practical and most valuable programming assignment questions on the topic: "{topic_name}". '
+    prompt = f'Act as a computer science professor. Generate {num_questions} practical and most valuable programming assignment questions on the topic: "{topic_name}". Do not give very hard question, keep question easy and Mediun '
     
     if description and description.strip().lower() != "basic":
         prompt += f'Specifically, focus these questions on the specific field or concept of: "{description}". '

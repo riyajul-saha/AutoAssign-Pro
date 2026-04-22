@@ -1,0 +1,25 @@
+{
+    "assignment_title": "Custom Assignment",
+    "questions": [
+        {
+            "id": 1,
+            "task": "Write a program that asks the user for their first name and then prints a personalized greeting using scanf() for input and printf() for output."
+        },
+        {
+            "id": 2,
+            "task": "Create a program that takes two integers from the user and displays their Sum, Difference, Product, and Quotient, demonstrating arithmetic operators (+, -, *, /)."
+        },
+        {
+            "id": 3,
+            "task": "Write a program that asks the user for a number and tells them if that number is Odd or Even, using the modulo operator (%) and if-else statements."
+        },
+        {
+            "id": 4,
+            "task": "Write a program to convert Celsius to Fahrenheit using the formula F = (C * 9/5) + 32, practicing floating\u2011point numbers and operator precedence."
+        },
+        {
+            "id": 5,
+            "task": "Ask the user for a small positive integer and calculate its factorial (e.g., 5! = 5 \u00d7 4 \u00d7 3 \u00d7 2 \u00d7 1) using a for or while loop to practice iteration and accumulation."
+        }
+    ]
+}

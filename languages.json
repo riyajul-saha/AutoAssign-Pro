@@ -1,0 +1,292 @@
+{
+    "languages": [
+        {
+            "name": "C",
+            "extension": ".c",
+            "check_command": "gcc --version",
+            "status": 1,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "gcc {filename}.c -o {filename}"
+                },
+                {
+                    "step": "run",
+                    "command": "./{filename}"
+                }
+            ]
+        },
+        {
+            "name": "C++",
+            "extension": ".cpp",
+            "check_command": "g++ --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "g++ {filename}.cpp -o {filename}"
+                },
+                {
+                    "step": "run",
+                    "command": "./{filename}"
+                }
+            ]
+        },
+        {
+            "name": "C#",
+            "extension": ".cs",
+            "check_command": "dotnet --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "csc {filename}.cs"
+                },
+                {
+                    "step": "run",
+                    "command": "./{filename}.exe"
+                },
+                {
+                    "step": "run_dotnet",
+                    "command": "dotnet run {filename}.cs"
+                }
+            ]
+        },
+        {
+            "name": "Dart",
+            "extension": ".dart",
+            "check_command": "dart --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "dart run {filename}.dart"
+                },
+                {
+                    "step": "compile",
+                    "command": "dart compile exe {filename}.dart"
+                }
+            ]
+        },
+        {
+            "name": "Go",
+            "extension": ".go",
+            "check_command": "go version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "go run {filename}.go"
+                },
+                {
+                    "step": "build",
+                    "command": "go build {filename}.go"
+                }
+            ]
+        },
+        {
+            "name": "HTML/CSS",
+            "extension": ".html",
+            "check_command": "node --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "open_browser",
+                    "command": "open {filename}.html"
+                },
+                {
+                    "step": "live_server",
+                    "command": "npx live-server {filename}.html"
+                }
+            ]
+        },
+        {
+            "name": "Java",
+            "extension": ".java",
+            "check_command": "javac --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "javac {filename}.java"
+                },
+                {
+                    "step": "run",
+                    "command": "java {filename}"
+                }
+            ]
+        },
+        {
+            "name": "JavaScript",
+            "extension": ".js",
+            "check_command": "node --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run_node",
+                    "command": "node {filename}.js"
+                },
+                {
+                    "step": "run_browser",
+                    "command": "open {filename}.html"
+                }
+            ]
+        },
+        {
+            "name": "Kotlin",
+            "extension": ".kt",
+            "check_command": "kotlinc -version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "kotlinc {filename}.kt -include-runtime -d {filename}.jar"
+                },
+                {
+                    "step": "run",
+                    "command": "java -jar {filename}.jar"
+                },
+                {
+                    "step": "script",
+                    "command": "kotlinc-jvm -script {filename}.kts"
+                }
+            ]
+        },
+        {
+            "name": "PHP",
+            "extension": ".php",
+            "check_command": "php --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "php {filename}.php"
+                },
+                {
+                    "step": "serve",
+                    "command": "php -S localhost:8000"
+                }
+            ]
+        },
+        {
+            "name": "Python",
+            "extension": ".py",
+            "check_command": "python --version",
+            "status": 1,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "python {filename}.py"
+                },
+                {
+                    "step": "run_python3",
+                    "command": "python3 {filename}.py"
+                }
+            ]
+        },
+        {
+            "name": "R",
+            "extension": ".r",
+            "check_command": "Rscript --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "Rscript {filename}.r"
+                },
+                {
+                    "step": "interactive",
+                    "command": "R -f {filename}.r"
+                }
+            ]
+        },
+        {
+            "name": "Ruby",
+            "extension": ".rb",
+            "check_command": "ruby --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "ruby {filename}.rb"
+                }
+            ]
+        },
+        {
+            "name": "Rust",
+            "extension": ".rs",
+            "check_command": "rustc --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile",
+                    "command": "rustc {filename}.rs"
+                },
+                {
+                    "step": "run",
+                    "command": "./{filename}"
+                },
+                {
+                    "step": "cargo_run",
+                    "command": "cargo run"
+                }
+            ]
+        },
+        {
+            "name": "SQL",
+            "extension": ".sql",
+            "check_command": "mysql --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "mysql",
+                    "command": "mysql -u root -p < {filename}.sql"
+                },
+                {
+                    "step": "postgresql",
+                    "command": "psql -f {filename}.sql"
+                },
+                {
+                    "step": "sqlite",
+                    "command": "sqlite3 database.db < {filename}.sql"
+                }
+            ]
+        },
+        {
+            "name": "Swift",
+            "extension": ".swift",
+            "check_command": "swift --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "run",
+                    "command": "swift {filename}.swift"
+                },
+                {
+                    "step": "compile",
+                    "command": "swiftc {filename}.swift -o {filename}"
+                }
+            ]
+        },
+        {
+            "name": "TypeScript",
+            "extension": ".ts",
+            "check_command": "tsc --version",
+            "status": 0,
+            "run_commands": [
+                {
+                    "step": "compile_and_run",
+                    "command": "tsc {filename}.ts && node {filename}.js"
+                },
+                {
+                    "step": "run_direct",
+                    "command": "npx ts-node {filename}.ts"
+                },
+                {
+                    "step": "run_tsx",
+                    "command": "npx tsx {filename}.ts"
+                }
+            ]
+        }
+    ]
+}

@@ -1,5 +1,8 @@
 import customtkinter as ctk
 import threading
+import os
+import json
+import tkinter.filedialog as filedialog
 from backend import generate_assignment  # Backend logic (API, parsing, saving)
 
 # ------------------------------
@@ -593,6 +596,8 @@ class AutoAssignProApp(ctk.CTk):
                 "Please select a Language/Topic from the list. It is mandatory.",
             )
             return
+            
+        self.current_language = topic
 
         # Lock the UI while processing
         self.is_processing = True
@@ -678,8 +683,507 @@ class AutoAssignProApp(ctk.CTk):
         self._log("─" * 40)
         if success:
             self._log("✨ Done! current_assignment.json has been created.")
+            self._show_success_popup()
         else:
             self._log("⚠️ Generation failed. Please try again.")
+
+    # ------------------------------------------------------------------
+    # Success, Review, and Folder Generation Methods
+    # ------------------------------------------------------------------
+    def _show_success_popup(self):
+        """Show a popup when question generation is successful."""
+        popup = ctk.CTkToplevel(self)
+        popup.title("Success")
+        popup.geometry("380x200")
+        popup.resizable(False, False)
+        popup.configure(fg_color=COLORS["bg"])
+        popup.transient(self)
+        popup.grab_set()
+
+        popup.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - popup.winfo_width()) // 2
+        y = self.winfo_y() + (self.winfo_height() - popup.winfo_height()) // 2
+        popup.geometry(f"+{x}+{y}")
+
+        ctk.CTkLabel(
+            popup, text="✅", font=ctk.CTkFont(size=42)
+        ).pack(pady=(15, 5))
+
+        ctk.CTkLabel(
+            popup, text="Questions are Ready!",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=COLORS["success"]
+        ).pack(pady=(0, 10))
+
+        btn_frame = ctk.CTkFrame(popup, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=10)
+
+        def on_review():
+            popup.destroy()
+            self._show_review_ui()
+
+        def on_continue():
+            popup.destroy()
+            self._prompt_for_save_location()
+
+        review_btn = ctk.CTkButton(
+            btn_frame, text="Review", font=ctk.CTkFont(weight="bold"),
+            fg_color=COLORS["card"], hover_color="#2A303C", text_color=COLORS["text"],
+            command=on_review, width=120
+        )
+        review_btn.pack(side="left", expand=True, padx=5)
+
+        continue_btn = ctk.CTkButton(
+            btn_frame, text="Continue", font=ctk.CTkFont(weight="bold"),
+            fg_color=COLORS["accent"], hover_color="#33D6FF", text_color="#000000",
+            command=on_continue, width=120
+        )
+        continue_btn.pack(side="right", expand=True, padx=5)
+
+    def _show_review_ui(self):
+        """Show a read-friendly UI to review, edit, copy, and continue."""
+        try:
+            with open("current_assignment.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self._log(f"❌ Failed to load assignment for review: {e}")
+            return
+
+        review_win = ctk.CTkToplevel(self)
+        review_win.title("Review Assignment")
+        review_win.geometry("800x600")
+        review_win.minsize(600, 500)
+        review_win.configure(fg_color=COLORS["bg"])
+        review_win.transient(self)
+        review_win.grab_set()
+
+        # Header
+        header = ctk.CTkFrame(review_win, fg_color="transparent")
+        header.pack(fill="x", padx=20, pady=(20, 10))
+        
+        title_val = data.get("assignment_title", "Assignment Title")
+        ctk.CTkLabel(
+            header, text=title_val,
+            font=ctk.CTkFont(size=20, weight="bold"), text_color=COLORS["text"]
+        ).pack(side="left")
+
+        # Scrollable area for questions
+        scroll_frame = ctk.CTkScrollableFrame(review_win, fg_color="transparent")
+        scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Track the textboxes
+        self.question_textboxes = []
+
+        def add_question_box(q_text=""):
+            box = ctk.CTkTextbox(
+                scroll_frame, height=80, font=ctk.CTkFont(size=14),
+                fg_color=COLORS["card"], text_color=COLORS["text"],
+                border_color=COLORS["accent"], border_width=1, corner_radius=8, wrap="word"
+            )
+            box.pack(fill="x", pady=(0, 10))
+            if q_text:
+                box.insert("1.0", q_text)
+            self.question_textboxes.append(box)
+
+        # Populate existing questions
+        for q in data.get("questions", []):
+            task_text = q.get("task", "")
+            if task_text:
+                add_question_box(task_text)
+
+        # Footer Actions
+        footer = ctk.CTkFrame(review_win, fg_color="transparent")
+        footer.pack(fill="x", padx=20, pady=20)
+
+        def add_empty_question():
+            add_question_box("")
+            # Scroll to bottom
+            review_win.after(100, lambda: scroll_frame._parent_canvas.yview_moveto(1.0))
+
+        add_btn = ctk.CTkButton(
+            footer, text="➕ Add Question", font=ctk.CTkFont(weight="bold"),
+            fg_color=COLORS["card"], hover_color="#2A303C", text_color=COLORS["text"],
+            command=add_empty_question, width=140
+        )
+        add_btn.pack(side="left", padx=(0, 10))
+
+        def on_copy():
+            lines = [f"{title_val}\n"]
+            for i, box in enumerate(self.question_textboxes):
+                text = box.get("1.0", "end-1c").strip()
+                if text:
+                    lines.append(f"{i+1}. {text}")
+            
+            full_text = "\n\n".join(lines)
+            review_win.clipboard_clear()
+            review_win.clipboard_append(full_text)
+            self._log("📋 Questions copied to clipboard.")
+
+        copy_btn = ctk.CTkButton(
+            footer, text="📋 Copy All", font=ctk.CTkFont(weight="bold"),
+            fg_color=COLORS["card"], hover_color="#2A303C", text_color=COLORS["accent"],
+            command=on_copy, width=120
+        )
+        copy_btn.pack(side="left")
+
+        def on_continue():
+            # Save final edited questions back to json
+            new_questions = []
+            for i, box in enumerate(self.question_textboxes):
+                text = box.get("1.0", "end-1c").strip()
+                if text:
+                    new_questions.append({"id": i+1, "task": text})
+            
+            data["questions"] = new_questions
+            try:
+                with open("current_assignment.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4)
+                self._log("💾 Updated current_assignment.json with edited questions.")
+            except Exception as e:
+                self._log(f"❌ Failed to save edits: {e}")
+
+            review_win.destroy()
+            self._prompt_for_save_location()
+
+        continue_btn = ctk.CTkButton(
+            footer, text="Continue", font=ctk.CTkFont(weight="bold", size=16),
+            fg_color=COLORS["accent"], hover_color="#33D6FF", text_color="#000000",
+            command=on_continue, width=140, height=40
+        )
+        continue_btn.pack(side="right")
+
+    def _prompt_for_save_location(self):
+        """Prompt user for a directory, then create Assignment/Code structure inside."""
+        self._log("📁 Waiting for user to select a save location...")
+        
+        # We need a small delay so the log updates visually before the dialog locks the thread
+        self.after(50, self._open_directory_dialog)
+        
+    def _open_directory_dialog(self):
+        chosen_dir = filedialog.askdirectory(title="Select Location to Save Assignment", parent=self)
+        
+        if not chosen_dir:
+            self._log("⚠️ Folder selection cancelled by user.")
+            return
+
+        self._create_folders(chosen_dir)
+
+    def _create_folders(self, base_path):
+        """Creates the 'Assignment' and 'Assignment/Code' directories."""
+        assignment_dir = os.path.join(base_path, "Assignment")
+        code_dir = os.path.join(assignment_dir, "Code")
+        img_dir = os.path.join(assignment_dir, "img")
+        
+        try:
+            os.makedirs(code_dir, exist_ok=True)
+            os.makedirs(img_dir, exist_ok=True)
+            self._log(f"✅ Created folder structure successfully at:\n    {assignment_dir}")
+            
+            # Now switch to VS Code IDE view and start the AI Agent
+            self.after(500, lambda: self._switch_to_ide_ui(assignment_dir, code_dir, img_dir))
+        except Exception as e:
+            self._log(f"❌ Failed to create folders: {e}")
+
+    # ------------------------------------------------------------------
+    # VS Code Looking IDE Interface
+    # ------------------------------------------------------------------
+    def _switch_to_ide_ui(self, assignment_dir, code_dir, img_dir):
+        # Destroy existing layout
+        for widget in self.winfo_children():
+            if widget != self:
+                widget.destroy()
+
+        # Re-create Header
+        self._create_header()
+
+        # Create IDE Container
+        self.ide_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.ide_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        # Paned Window logic (Left & Right)
+        self.ide_left = ctk.CTkFrame(self.ide_container, fg_color="transparent")
+        self.ide_left.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        self.ide_right = ctk.CTkFrame(self.ide_container, fg_color=COLORS["card"], width=400, corner_radius=12)
+        self.ide_right.pack(side="right", fill="y", padx=(10, 0))
+        self.ide_right.pack_propagate(False)
+
+        # -- Left Side: Editor Tabs --
+        self.editor_tabs = ctk.CTkTabview(self.ide_left, fg_color=COLORS["card"], segmented_button_selected_color=COLORS["accent"], segmented_button_selected_hover_color="#33D6FF")
+        self.editor_tabs.pack(fill="both", expand=True, pady=(0, 10))
+        
+        # -- Left Side: Bottom Terminal --
+        term_frame = ctk.CTkFrame(self.ide_left, fg_color=COLORS["card"], height=200, corner_radius=8)
+        term_frame.pack(fill="x", pady=(0, 0))
+        term_frame.pack_propagate(False)
+        ctk.CTkLabel(term_frame, text="TERMINAL", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["accent"]).pack(anchor="w", padx=10, pady=(5, 0))
+        self.terminal_textbox = ctk.CTkTextbox(term_frame, font=ctk.CTkFont(family="Courier New", size=13), fg_color="#090C10", text_color="#C9D1D9", wrap="word", state="disabled")
+        self.terminal_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # -- Right Side: Chill Mode --
+        self.right_col = self.ide_right
+        self._create_chill_panel()
+
+        # -- Right Side: System Log --
+        log_header = ctk.CTkFrame(self.ide_right, fg_color="transparent")
+        log_header.pack(fill="x", padx=10, pady=(10, 5))
+        ctk.CTkLabel(log_header, text="SYSTEM LOG", font=ctk.CTkFont(weight="bold", size=14), text_color=COLORS["accent"]).pack(side="left")
+        
+        self.log_textbox = ctk.CTkTextbox(self.ide_right, font=ctk.CTkFont(family="Courier New", size=12), fg_color="#090C10", text_color="#3FB950", wrap="word", state="disabled")
+        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        self._log("IDE Initialized. Starting AI Coding Agent...")
+        
+        # Start the Agent loop in a background thread
+        import threading
+        t = threading.Thread(target=self._run_coding_agent, args=(assignment_dir, code_dir, img_dir))
+        t.daemon = True
+        t.start()
+
+    def _ask_permission(self, cmd):
+        self._permission_result = None
+        event = threading.Event()
+
+        def _show_dialog():
+            popup = ctk.CTkToplevel(self)
+            popup.title("Permission Required")
+            popup.geometry("400x200")
+            popup.resizable(False, False)
+            popup.configure(fg_color=COLORS["bg"])
+            popup.transient(self)
+            popup.grab_set()
+
+            popup.update_idletasks()
+            x = self.winfo_x() + (self.winfo_width() - popup.winfo_width()) // 2
+            y = self.winfo_y() + (self.winfo_height() - popup.winfo_height()) // 2
+            popup.geometry(f"+{x}+{y}")
+
+            ctk.CTkLabel(popup, text="Allow this command to run?", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["accent"]).pack(pady=(15, 10))
+            
+            cmd_box = ctk.CTkTextbox(popup, height=60, font=ctk.CTkFont(family="Courier New", size=12), fg_color="#090C10", text_color="#C9D1D9")
+            cmd_box.pack(fill="x", padx=20)
+            cmd_box.insert("1.0", cmd)
+            cmd_box.configure(state="disabled")
+
+            btn_frame = ctk.CTkFrame(popup, fg_color="transparent")
+            btn_frame.pack(fill="x", padx=20, pady=15)
+
+            def on_allow():
+                self._permission_result = True
+                popup.destroy()
+                event.set()
+                
+            def on_deny():
+                self._permission_result = False
+                popup.destroy()
+                event.set()
+
+            ctk.CTkButton(btn_frame, text="Deny", fg_color=COLORS["card"], hover_color=COLORS["error"], command=on_deny, width=100).pack(side="left", expand=True)
+            ctk.CTkButton(btn_frame, text="Allow", fg_color=COLORS["accent"], hover_color="#33D6FF", text_color="#000", command=on_allow, width=100).pack(side="right", expand=True)
+            
+        self.after(0, _show_dialog)
+        event.wait()
+        return self._permission_result
+
+    def _term_log(self, msg):
+        self.terminal_textbox.configure(state="normal")
+        self.terminal_textbox.insert("end", f"{msg}\n")
+        self.terminal_textbox.see("end")
+        self.terminal_textbox.configure(state="disabled")
+        self.update_idletasks()
+
+    def _run_coding_agent(self, assignment_dir, code_dir, img_dir):
+        from agent import check_compiler, solve_question
+        import subprocess
+        from PIL import ImageGrab
+        
+        language = getattr(self, "current_language", "Python")
+        self._log(f"Checking compiler for {language}...")
+        
+        is_available, lang_info = check_compiler(language)
+        if not is_available:
+            self._log(f"❌ Compiler for {language} not found on your system!")
+            self.after(0, lambda: self._show_error_popup("Compiler Missing", f"Please download and install the compiler/runtime for {language}. The agent cannot run the code."))
+            return
+            
+        self._log(f"✅ Compiler found! Starting task solving...")
+        
+        try:
+            with open("current_assignment.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self._log(f"❌ Could not read questions: {e}")
+            return
+            
+        questions = data.get("questions", [])
+        ext = lang_info.get("extension", ".txt")
+        run_commands = lang_info.get("run_commands", [])
+        
+        for idx, q in enumerate(questions):
+            q_id = q.get("id", idx+1)
+            task = q.get("task", "")
+            if not task:
+                continue
+                
+            filename = f"a{q_id}"
+            file_path = os.path.join(code_dir, f"{filename}{ext}")
+            
+            self._log(f"🤖 AI is solving Question {q_id}...")
+            
+            error_context = ""
+            max_retries = 2
+            success = False
+            
+            for attempt in range(max_retries):
+                # Call AI to solve
+                result = solve_question(task, language, error_context)
+                if "error" in result:
+                    self._log(f"❌ AI Error: {result['error']}")
+                    break
+                    
+                code = result.get("code", "")
+                dependencies = result.get("dependencies", [])
+                demo_input = result.get("demo_input", [])
+                
+                # Write file
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(code)
+                
+                # Update UI tab
+                self.after(0, lambda f_name=f"{filename}{ext}", c=code: self._add_or_update_editor_tab(f_name, c))
+                
+                self._log(f"💾 Saved {filename}{ext}.")
+                
+                # Install dependencies (ask user first)
+                for dep in dependencies:
+                    if not self._ask_permission(dep):
+                        self._term_log(f"Skipped dependency: {dep}")
+                        continue
+                        
+                    self._term_log(f"$ {dep}")
+                    try:
+                        subprocess.run(dep, shell=True, check=True)
+                        self._term_log(f"Dependency installed successfully.")
+                    except:
+                        self._term_log(f"Warning: Failed to install dependency '{dep}'")
+                        
+                # Execute Code
+                self._term_log(f"\n--- Running Question {q_id} ---")
+                
+                execution_failed = False
+                for cmd_info in run_commands:
+                    cmd_template = cmd_info.get("command", "")
+                    cmd = cmd_template.replace("{filename}", filename)
+                    
+                    if not self._ask_permission(cmd):
+                        self._term_log(f"Execution aborted by user for: {cmd}")
+                        execution_failed = True
+                        break
+                        
+                    self._term_log(f"$ {cmd}")
+                    try:
+                        # Feed input if needed
+                        input_str = "\n".join(demo_input) + "\n" if demo_input else ""
+                        process = subprocess.Popen(
+                            cmd, shell=True, cwd=code_dir,
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                        )
+                        stdout, stderr = process.communicate(input=input_str, timeout=15)
+                        
+                        if stdout:
+                            self._term_log(stdout)
+                        if stderr:
+                            self._term_log(stderr)
+                            
+                        if process.returncode != 0:
+                            execution_failed = True
+                            error_context = stderr if stderr else "Non-zero exit code"
+                            self._term_log(f"Error: Process exited with code {process.returncode}")
+                            break
+                    except Exception as e:
+                        execution_failed = True
+                        error_context = str(e)
+                        self._term_log(f"Execution Error: {str(e)}")
+                        break
+                        
+                if execution_failed:
+                    self._log(f"⚠️ Execution failed on attempt {attempt+1}. Asking AI to fix...")
+                    continue # Try again
+                else:
+                    success = True
+                    # Take screenshot
+                    self.after(500, lambda qid=q_id, f=filename: self._take_screenshot(qid, img_dir, f))
+                    break # Success! Move to next question
+                    
+            if not success:
+                self._log(f"❌ Failed to solve Question {q_id} after {max_retries} attempts.")
+                
+        self._log("🎉 All questions processed!")
+        self._term_log("\n--- All done! ---")
+
+    def _add_or_update_editor_tab(self, tab_name, code_content):
+        # Check if tab exists
+        try:
+            tab = self.editor_tabs.tab(tab_name)
+        except ValueError:
+            tab = self.editor_tabs.add(tab_name)
+            # Create a text box inside the new tab
+            textbox = ctk.CTkTextbox(tab, font=ctk.CTkFont(family="Courier New", size=14), fg_color="#1E1E1E", text_color="#D4D4D4", wrap="none")
+            textbox.pack(fill="both", expand=True, padx=5, pady=5)
+            # Store reference in the tab object
+            tab.textbox = textbox
+            
+        # Update text
+        tab.textbox.configure(state="normal")
+        tab.textbox.delete("1.0", "end")
+        tab.textbox.insert("1.0", code_content)
+        
+        self.editor_tabs.set(tab_name)
+
+    def _take_screenshot(self, q_id, img_dir, filename):
+        try:
+            import time
+            from PIL import ImageGrab
+            
+            # Target the terminal frame container
+            target_widget = self.terminal_textbox.master
+            
+            x = target_widget.winfo_rootx()
+            y = target_widget.winfo_rooty()
+            w = target_widget.winfo_width()
+            
+            # Height:Width = 1:2 -> Height = Width / 2
+            h = w // 2
+            
+            # Wait for UI to settle
+            time.sleep(0.5)
+            
+            # Scroll to top
+            self.terminal_textbox.yview_moveto(0)
+            time.sleep(0.2)
+            
+            img_index = 1
+            while True:
+                img = ImageGrab.grab(bbox=(x, y, x+w, y+h))
+                img_path = os.path.join(img_dir, f"{filename}{img_index}.png")
+                img.save(img_path)
+                self._log(f"📸 Saved screenshot {img_index} to {filename}{img_index}.png")
+                
+                top, bottom = self.terminal_textbox.yview()
+                if bottom >= 1.0:
+                    break
+                    
+                self.terminal_textbox.yview_moveto(bottom)
+                img_index += 1
+                time.sleep(0.3)
+                
+            # Clear terminal after execution and screenshots are done
+            self.terminal_textbox.configure(state="normal")
+            self.terminal_textbox.delete("1.0", "end")
+            self.terminal_textbox.configure(state="disabled")
+            
+        except Exception as e:
+            self._log(f"⚠️ Could not capture screenshot: {e}")
 
 
 
